@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./mill -i __.test

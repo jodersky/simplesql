@@ -1,0 +1,5 @@
+#!/bin/bash
+
+./mill -i mill.scalalib.PublishModule/publishAll \
+    __.publishArtifacts jodersky:"$(pass infra/oss.sonatype.org)" \
+    --release true
