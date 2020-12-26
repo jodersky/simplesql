@@ -43,10 +43,17 @@ object Reader {
     readers: Array[Reader[_]]
   ) extends Reader[A] {
     def read(results: jsql.ResultSet, nextIdx: () => Int): A = {
-      val prod = deriving.ArrayProduct(new Array[AnyRef](readers.length))
+      val elems = new Array[Any](readers.length)
       for (i <- 0 until readers.length) {
-        prod(i) = readers(i).read(results, nextIdx)
+        elems(i) = readers(i).read(results, nextIdx)
       }
+      val prod: Product = new scala.Product {
+        def productElement(n: Int): Any = elems(n)
+        def productArity: Int = elems.length
+        def canEqual(that: Any) = true
+        override def productIterator: Iterator[Any] = elems.iterator
+      }
+
       m.fromProduct(prod)
     }
   }
@@ -132,19 +139,19 @@ object Writer {
   )
 
   import scala.quoted._
-  def sqlImpl(c: Expr[jsql.Connection], sc: Expr[StringContext], args: Expr[Seq[Any]])(using qctx: QuoteContext): Expr[jsql.PreparedStatement] = {
+  def sqlImpl(c: Expr[jsql.Connection], sc: Expr[StringContext], args: Expr[Seq[Any]])(using qctx: Quotes): Expr[jsql.PreparedStatement] = {
     val writers = args match {
       case Varargs(exprs) =>
-        import qctx.tasty._
-        for ('{ $arg: $t } <- exprs) yield {
-          val w = AppliedType(
-            typeOf[Writer[_]].asInstanceOf[AppliedType].tycon,
-            arg.unseal.tpe.widen :: Nil
+        import qctx.reflect._
+
+        for ('{ $arg: t } <- exprs) yield {
+          val w = TypeRepr.of[Writer].appliedTo(
+            TypeRepr.of[t].widen
           )
 
-          searchImplicit(w) match {
+          Implicits.search(w) match {
             case iss: ImplicitSearchSuccess =>
-              iss.tree.seal.asInstanceOf[Expr[Writer[_]]]
+              iss.tree.asExprOf[Writer[_]]
             case isf: ImplicitSearchFailure =>
               report.error(s"could not find implicit for ${w.show}", arg)
               '{???}
