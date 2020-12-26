@@ -1,7 +1,7 @@
 import mill._, scalalib._, scalafmt._, publish._
 
 object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
-  def scalaVersion = "3.0.0-M2"
+  def scalaVersion = "3.0.0-M3"
 
   def publishVersion = "0.1.0"
   def pomSettings = PomSettings(

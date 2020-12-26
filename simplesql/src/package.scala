@@ -28,15 +28,15 @@ case class SimpleReader[A](read0: (jsql.ResultSet, Int) => A) extends Reader[A] 
 
 object Reader {
 
-  given SimpleReader[Byte](_.getByte(_))
-  given SimpleReader[Short](_.getShort(_))
-  given SimpleReader[Int](_.getInt(_))
-  given SimpleReader[Long](_.getLong(_))
-  given SimpleReader[Float](_.getFloat(_))
-  given SimpleReader[Double](_.getDouble(_))
-  given SimpleReader[Boolean](_.getBoolean(_))
-  given SimpleReader[String](_.getString(_))
-  given SimpleReader[Array[Byte]](_.getBytes(_))
+  given SimpleReader[Byte] = SimpleReader(_.getByte(_))
+  given SimpleReader[Short] = SimpleReader(_.getShort(_))
+  given SimpleReader[Int] = SimpleReader(_.getInt(_))
+  given SimpleReader[Long] = SimpleReader(_.getLong(_))
+  given SimpleReader[Float] = SimpleReader(_.getFloat(_))
+  given SimpleReader[Double] = SimpleReader(_.getDouble(_))
+  given SimpleReader[Boolean] = SimpleReader(_.getBoolean(_))
+  given SimpleReader[String] = SimpleReader(_.getString(_))
+  given SimpleReader[Array[Byte]] = SimpleReader(_.getBytes(_))
 
   class ProductReader[A](
     m: deriving.Mirror.ProductOf[A],
@@ -63,7 +63,7 @@ object Reader {
     case _: (t *: ts) => compiletime.summonInline[Reader[t]] :: summonReaders[ts]
   }
 
-  inline given [A](using m: deriving.Mirror.ProductOf[A]) as Reader[A] = ProductReader[A](
+  inline given [A](using m: deriving.Mirror.ProductOf[A]): Reader[A] = ProductReader[A](
     m,
     summonReaders[m.MirroredElemTypes].toArray
   )
@@ -107,15 +107,15 @@ case class SimpleWriter[A](write0: (jsql.PreparedStatement, Int, A) => Unit) ext
 }
 
 object Writer {
-  given SimpleWriter[Byte](_.setByte(_, _))
-  given SimpleWriter[Short](_.setShort(_, _))
-  given SimpleWriter[Int](_.setInt(_, _))
-  given SimpleWriter[Long](_.setLong(_, _))
-  given SimpleWriter[Float](_.setFloat(_, _))
-  given SimpleWriter[Double](_.setDouble(_, _))
-  given SimpleWriter[Boolean](_.setBoolean(_, _))
-  given SimpleWriter[String](_.setString(_, _))
-  given SimpleWriter[Array[Byte]](_.setBytes(_, _))
+  given SimpleWriter[Byte] = SimpleWriter(_.setByte(_, _))
+  given SimpleWriter[Short] = SimpleWriter(_.setShort(_, _))
+  given SimpleWriter[Int] = SimpleWriter(_.setInt(_, _))
+  given SimpleWriter[Long] = SimpleWriter(_.setLong(_, _))
+  given SimpleWriter[Float] = SimpleWriter(_.setFloat(_, _))
+  given SimpleWriter[Double] = SimpleWriter(_.setDouble(_, _))
+  given SimpleWriter[Boolean] = SimpleWriter(_.setBoolean(_, _))
+  given SimpleWriter[String] = SimpleWriter(_.setString(_, _))
+  given SimpleWriter[Array[Byte]] = SimpleWriter(_.setBytes(_, _))
 
   class ProductWriter[A <: Product](
     writers: Array[Writer[_]]
@@ -134,15 +134,16 @@ object Writer {
     case _: (t *: ts) => compiletime.summonInline[Writer[t]] :: summonWriters[ts]
   }
 
-  inline given [A <: Product](using m: deriving.Mirror.ProductOf[A]) as ProductWriter[A] = ProductWriter[A](
+  inline given [A <: Product](using m: deriving.Mirror.ProductOf[A]): ProductWriter[A] = ProductWriter[A](
     summonWriters[m.MirroredElemTypes].toArray
   )
 
   import scala.quoted._
   def sqlImpl(c: Expr[jsql.Connection], sc: Expr[StringContext], args: Expr[Seq[Any]])(using qctx: Quotes): Expr[jsql.PreparedStatement] = {
+    import qctx.reflect._
+
     val writers = args match {
       case Varargs(exprs) =>
-        import qctx.reflect._
 
         for ('{ $arg: t } <- exprs) yield {
           val w = TypeRepr.of[Writer].appliedTo(
