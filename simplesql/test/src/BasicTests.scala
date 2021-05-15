@@ -1,6 +1,6 @@
 import utest._
 
-import _root_.{simplesql => sq}
+import simplesql as sq
 
 object BasicTests extends TestSuite {
   val tests = Tests{

@@ -13,10 +13,11 @@ natural representation of relational data sets.
 ## Example
 
 ```scala
-import _root_.{simplesql => sq}
+import simplesql as sq
 
-// all queries must be run within the context of a connection
-sq.transaction("jdbc:sqlite::memory:"){ /* an implicit connection is injected here */
+// all queries must be run within the context of a connection, use either
+// `sq.run` or `sq.transaction` blocks
+sq.transaction("jdbc:sqlite::memory:"){
 
   sq.write(
     sql"""
