@@ -5,7 +5,9 @@ import simplesql as sq
 object BasicTests extends TestSuite {
   val tests = Tests{
     test("basic"){
-      sq.transaction("jdbc:sqlite::memory:"){
+      val ds = com.zaxxer.hikari.HikariDataSource()
+      ds.setJdbcUrl("jdbc:sqlite::memory:")
+      sq.transaction(ds){
         sq.write(
           sql"""
             create table user (

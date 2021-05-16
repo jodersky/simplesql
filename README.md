@@ -15,9 +15,17 @@ natural representation of relational data sets.
 ```scala
 import simplesql as sq
 
+// a plain DataSource is needed, this example uses a connection pool implemented
+// by HicariCP, but you are free to use whatever DataSource you wish
+val ds: javax.sql.DataSource = {
+  val ds = com.zaxxer.hikari.HikariDataSource()
+  ds.setJdbcUrl("jdbc:sqlite::memory:")
+  ds
+}
+
 // all queries must be run within the context of a connection, use either
 // `sq.run` or `sq.transaction` blocks
-sq.transaction("jdbc:sqlite::memory:"){
+sq.transaction(ds){
 
   sq.write(
     sql"""
@@ -38,7 +46,6 @@ sq.transaction("jdbc:sqlite::memory:"){
   val u = User(2, "admin", "admin@example.org")
   sq.write(sql"""insert into user values ($u)""")
 }
-
 ```
 
 ## Explanation
@@ -56,15 +63,15 @@ provide a connection, however the latter will automatically roll back any
 changes, should an exception be thrown in its body.
 
 An in-scope connection also gives access to the `sql` string intepolator. This
-interpolator is a utility to build `java.sql.PreparedStatements`. In other
-words, it can be used to build injection-safe queries with interpolated
-parameters. Interpolated parameters may be primitve types (supported by JDBC),
-or products of these. Products will be flattened into multiple interpolated '?'
-parameters.
+interpolator is a utility to build `simplesql.Query`s, which are builders for
+`java.sql.PreparedStatements`. In other words, it can be used to build
+injection-safe queries with interpolated parameters. Interpolated parameters may
+be primitve types (supported by JDBC), or products of these. Products will be
+flattened into multiple interpolated '?' parameters.
 
 ### Read Queries
 
-Read queries (i.e. selects) must be run in a `read` call. A read must have its
+Read queries (e.g. selects) must be run in a `read` call. A read must have its
 result type specified. The result type may be any primitive type supported by
 JDBC `ResultSet`s or a product thereof (including named products, i.e. `case
 class`es). Note that products may be nested, in which case they will simply be
@@ -72,5 +79,5 @@ flattened when reading actual results from a query.
 
 ### Write Queries
 
-Write queries (i.e. insertions, updates, deletes and table alterations) must be
+Write queries (e.g. insertions, updates, deletes and table alterations) must be
 run in a `write` call.
