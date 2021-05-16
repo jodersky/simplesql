@@ -282,6 +282,20 @@ object write {
       if (stat != null) stat.close()
     }
   }
+
+  def generating[A](query: Query)(using c: Connection, r: Reader[A]): A = {
+    var stat: jsql.PreparedStatement = null
+    var res: jsql.ResultSet = null
+    try {
+      stat = Query.newPreparedStatement(query, c.underlying)
+      stat.executeUpdate()
+      res = stat.getGeneratedKeys()
+      r.read(res, 1)
+    } finally {
+      if (res != null) res.close()
+      if (stat != null) stat.close()
+    }
+  }
 }
 
 object transaction {

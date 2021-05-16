@@ -51,5 +51,29 @@ object BasicTests extends TestSuite {
         sq.read[Int](sql"""select id from user where name='john2'""") ==> 43 :: Nil
       }
     }
+    test("returning"){
+      val ds = com.zaxxer.hikari.HikariDataSource()
+      ds.setJdbcUrl("jdbc:sqlite::memory:")
+      sq.transaction(ds){
+        sq.write(
+          sql"""
+            create table user (
+              id integer primary key autoincrement,
+              name string not null,
+              email string not null
+            )
+          """
+        )
+      }
+
+      val res0 = sq.run(ds) {
+        sq.write.generating[Int](sql"insert into user (name, email) values ('admin', 'foo')")
+      }
+      res0 ==> 1
+      val res1 = sq.run(ds) {
+        sq.write.generating[Int](sql"insert into user (name, email) values ('admin', 'foo')")
+      }
+      res1 ==> 2
+    }
   }
 }
