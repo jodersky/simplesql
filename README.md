@@ -10,6 +10,12 @@ that, which unfortunately is not yet available for Scala 3), but it does offer
 safe string interpolation and utilities to work with product types, wich are the
 natural representation of relational data sets.
 
+
+SimpleSQL has no dependencies. It is published to maven central, under
+`io.crashbox:simplesql_3`, but **it can also be embedded by copying the file
+[simplesql/src/package.scala](https://raw.githubusercontent.com/jodersky/simplesql/master/simplesql/src/package.scala)
+into your application**!
+
 ## Example
 
 ```scala
