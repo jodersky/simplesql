@@ -12,7 +12,7 @@ natural representation of relational data sets.
 
 SimpleSQL has no dependencies. It is published to maven central, under
 `io.crashbox:simplesql_3`, but **it can also be embedded by copying the file
-[simplesql/src/package.scala](https://raw.githubusercontent.com/jodersky/simplesql/master/simplesql/src/package.scala)
+[simplesql/src/package.scala](https://raw.githubusercontent.com/jodersky/simplesql/master/simplesql/src/simplesql.scala)
 into your application**!
 
 ## Example
