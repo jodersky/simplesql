@@ -62,14 +62,14 @@ object Query {
     '{
       val ws = ${Expr.ofSeq(writers)}
       val as = $args
-      val arity = ws.map(_.arity).sum
 
       val strings = $sc.parts.iterator
+      val arities = ws.iterator
       val buf = new StringBuilder(strings.next())
 
       while(strings.hasNext) {
         buf.append("?")
-        for (i <- 1 until arity) {
+        for (i <- 1 until arities.next().arity) {
           buf.append(",")
           buf.append("?")
         }
@@ -157,7 +157,7 @@ object Reader {
     case _: (t *: ts) => compiletime.summonInline[Reader[t]] :: summonReaders[ts]
   }
 
-  inline given [A](using m: deriving.Mirror.ProductOf[A]): Reader[A] = ProductReader[A](
+  inline given derived[A](using m: deriving.Mirror.ProductOf[A]): Reader[A] = ProductReader[A](
     m,
     summonReaders[m.MirroredElemTypes].toArray
   )
@@ -266,7 +266,7 @@ object Writer {
     case _: (t *: ts) => compiletime.summonInline[Writer[t]] :: summonWriters[ts]
   }
 
-  inline given [A <: Product](using m: deriving.Mirror.ProductOf[A]): ProductWriter[A] = ProductWriter[A](
+  inline given derived[A <: Product](using m: deriving.Mirror.ProductOf[A]): ProductWriter[A] = ProductWriter[A](
     summonWriters[m.MirroredElemTypes].toArray
   )
 
