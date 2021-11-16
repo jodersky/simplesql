@@ -8,82 +8,98 @@ import scala.annotation
 
 @annotation.implicitNotFound("No database connection found. Make sure to call this in a `run()` or `transaction()` block.")
 case class Connection(underlying: jsql.Connection) {
-  extension (sc: StringContext) {
+  extension (inline sc: StringContext) {
     inline def sql(inline args: Any*): Query = ${Query.sqlImpl('{sc}, '{args})}
   }
 }
 
-/** A thing wrapper around an SQL statement */
+/** A thin wrapper around an SQL statement */
 case class Query(
   sql: String,
-  writers: Array[Writer[_]],
-  data: Array[_]
+  fillStatement: jsql.PreparedStatement => Unit
 )
 
 object Query {
 
+  // The caller must close the statement
   def newPreparedStatement(q: Query, c: jsql.Connection): jsql.PreparedStatement = {
     val stat = c.prepareStatement(q.sql)
-    var baseIdx = 1
-    for (i <- 0 until q.writers.length) {
-      val w = q.writers(i)
-      val d = q.data(i)
-      w.asInstanceOf[Writer[Any]].write(stat, baseIdx, d)
-      baseIdx += w.arity
-    }
+    q.fillStatement(stat)
     stat
   }
 
   import scala.quoted.{Expr, Quotes, Varargs}
-  def sqlImpl(sc: Expr[StringContext], args: Expr[Seq[Any]])(using qctx: Quotes): Expr[Query] = {
+  def sqlImpl(sc0: Expr[StringContext], args0: Expr[Seq[Any]])(using qctx: Quotes): Expr[Query] = {
     import scala.quoted.quotes.reflect._
+    val args: Seq[Expr[_]] = args0 match {
+      case Varargs(exprs) => exprs
+    }
+    val writers: Seq[Expr[SimpleWriter[_]]] = for ('{ $arg: t } <- args) yield {
+      val w = TypeRepr.of[SimpleWriter].appliedTo(
+        TypeRepr.of[t].widen
+      )
 
-    val writers: Seq[Expr[Writer[_]]] = args match {
-      case Varargs(exprs) =>
-        for ('{ $arg: t } <- exprs) yield {
-          val w = TypeRepr.of[Writer].appliedTo(
-            TypeRepr.of[t].widen
-          )
-
-          Implicits.search(w) match {
-            case iss: ImplicitSearchSuccess =>
-              iss.tree.asExprOf[Writer[_]]
-            case isf: ImplicitSearchFailure =>
-              report.error(s"could not find implicit for ${w.show}", arg)
-              '{???}
-          }
-        }
-      case _ =>
-        report.error("args must be explicit", args)
-        Nil
+      Implicits.search(w) match {
+        case iss: ImplicitSearchSuccess =>
+          iss.tree.asExprOf[SimpleWriter[_]]
+        case isf: ImplicitSearchFailure =>
+          report.error(s"could not find implicit for ${w.show}", arg)
+          '{???}
+      }
     }
 
 
-    '{
-      val ws = ${Expr.ofSeq(writers)}
-      val as = $args
-
-      val strings = $sc.parts.iterator
-      val arities = ws.iterator
-      val buf = new StringBuilder(strings.next())
-
-      while(strings.hasNext) {
-        buf.append("?")
-        for (i <- 1 until arities.next().arity) {
-          buf.append(",")
-          buf.append("?")
+    val qstring = sc0.value match {
+      case None =>
+        report.error("string context must be known at compile time", sc0)
+        ""
+      case Some(sc) =>
+        val strings = sc.parts.iterator
+        val buf = new StringBuilder(strings.next())
+        while(strings.hasNext) {
+          buf.append(" ? ")
+          buf.append(strings.next())
         }
-        buf.append(strings.next())
-      }
-      val str = buf.result()
+        buf.result()
+    }
+
+    val r = '{
       Query(
-        str,
-        ws.toArray,
-        as.toArray
+        ${Expr(qstring)},
+        (stat: jsql.PreparedStatement) => ${
+          val exprs = for (((writer, arg), idx) <- writers.zip(args).zipWithIndex.toList) yield {
+            writer match {
+              case '{ $writer: SimpleWriter[t] } =>
+                '{$writer.write(stat, ${Expr(idx + 1)}, ${arg.asExprOf[t]})}
+            }
+          }
+          Expr.block(exprs, 'stat)
+        }
       )
     }
-
+    //System.err.println(r.show)
+    r
   }
+}
+
+
+trait SimpleWriter[A] {
+  def write(stat: jsql.PreparedStatement, idx: Int, value: A): Unit
+}
+
+object SimpleWriter {
+
+  given SimpleWriter[Byte] = (stat, idx, value) => stat.setByte(idx, value)
+  given SimpleWriter[Short] = (stat, idx, value) => stat.setShort(idx, value)
+  given SimpleWriter[Int] = (stat, idx, value) => stat.setInt(idx, value)
+  given SimpleWriter[Long] = (stat, idx, value) => stat.setLong(idx, value)
+  given SimpleWriter[Float] = (stat, idx, value) => stat.setFloat(idx, value)
+  given SimpleWriter[Double] = (stat, idx, value) => stat.setDouble(idx, value)
+  given SimpleWriter[Boolean] = (stat, idx, value) => stat.setBoolean(idx, value)
+  given SimpleWriter[String] = (stat, idx, value) => stat.setString(idx, value)
+  given SimpleWriter[Array[Byte]] = (stat, idx, value) => stat.setBytes(idx, value)
+  given SimpleWriter[BigDecimal] = (stat, idx, value) => stat.setBigDecimal(idx, value.bigDecimal)
+
 }
 
 trait Reader[A] {
@@ -157,7 +173,12 @@ object Reader {
     case _: (t *: ts) => compiletime.summonInline[Reader[t]] :: summonReaders[ts]
   }
 
-  inline given derived[A](using m: deriving.Mirror.ProductOf[A]): Reader[A] = ProductReader[A](
+  inline given [A <: Tuple](using m: deriving.Mirror.ProductOf[A]): Reader[A] = ProductReader[A](
+    m,
+    summonReaders[m.MirroredElemTypes].toArray
+  )
+
+  inline def derived[A](using m: deriving.Mirror.ProductOf[A]): Reader[A] = ProductReader[A](
     m,
     summonReaders[m.MirroredElemTypes].toArray
   )
@@ -187,96 +208,11 @@ object read {
 
 }
 
-trait Writer[A] {
-  type Value = A
-  def arity: Int
-  def write(statement: jsql.PreparedStatement, baseIdx: Int, value: Value): Unit
-}
-
-object Writer {
-
-  given Writer[Byte] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setByte(idx, value)
-    }
-  }
-  given Writer[Short] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setShort(idx, value)
-    }
-  }
-  given Writer[Int] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setInt(idx, value)
-    }
-  }
-  given Writer[Long] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setLong(idx, value)
-    }
-  }
-  given Writer[Float] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setFloat(idx, value)
-    }
-  }
-  given Writer[Double] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setDouble(idx, value)
-    }
-  }
-  given Writer[Boolean] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setBoolean(idx, value)
-    }
-  }
-  given Writer[String] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setString(idx, value)
-    }
-  }
-  given Writer[Array[Byte]] with {
-    val arity = 1
-    def write(stat: jsql.PreparedStatement, idx: Int, value: Value): Unit = {
-      stat.setBytes(idx, value)
-    }
-  }
-  class ProductWriter[A <: Product](
-    writers: Array[Writer[_]]
-  ) extends Writer[A] {
-    val arity = writers.map(_.arity).sum
-
-    def write(statement: jsql.PreparedStatement, baseIdx: Int, value: A): Unit = {
-      for (i <- 0 until writers.length) {
-        writers(i).asInstanceOf[Writer[Any]].write(statement, baseIdx + i, value.productElement(i))
-      }
-    }
-  }
-
-  inline def summonWriters[T <: Tuple]: List[Writer[_]] = inline compiletime.erasedValue[T] match {
-    case _: EmptyTuple => Nil
-    case _: (t *: ts) => compiletime.summonInline[Writer[t]] :: summonWriters[ts]
-  }
-
-  inline given derived[A <: Product](using m: deriving.Mirror.ProductOf[A]): ProductWriter[A] = ProductWriter[A](
-    summonWriters[m.MirroredElemTypes].toArray
-  )
-
-}
-
 object write {
   def apply(query: Query)(using c: Connection): Int = {
     var stat: jsql.PreparedStatement = null
     try {
-      val stat = Query.newPreparedStatement(query, c.underlying)
+      stat = Query.newPreparedStatement(query, c.underlying)
       stat.executeUpdate()
     } finally {
       if (stat != null) stat.close()

@@ -18,7 +18,7 @@ object BasicTests extends TestSuite {
           """
         )
         sq.read[(Int, String, String)](sql"select * from user") ==> Nil
-        sq.write(sql"""insert into user values (1, "admin", "admin@example.org")""") ==> 1
+        sq.write(sql"""insert into user values (${1}, ${"admin"}, ${"admin@example.org"})""") ==> 1
 
         sq.read[(Int, String, String)](sql"select * from user") ==> (1, "admin", "admin@example.org") :: Nil
 
@@ -27,12 +27,12 @@ object BasicTests extends TestSuite {
         sq.read[((Int, String), String)](sql"select * from user") ==> ((1, "admin"), "admin@example.org") :: Nil
 
         // named products
-        case class User(id: Int, name: String, email: String)
+        case class User(id: Int, name: String, email: String) derives sq.Reader
         sq.read[User](sql"select * from user") ==> User(1, "admin", "admin@example.org") :: Nil
 
         // nested named products
-        case class Profile(name: String, email: String)
-        case class Account(id: Int, p: Profile)
+        case class Profile(name: String, email: String) derives sq.Reader
+        case class Account(id: Int, p: Profile) derives sq.Reader
         sq.read[Account](sql"select * from user") ==> Account(1, Profile("admin", "admin@example.org")) :: Nil
 
         sq.write(sql"update user set name = 'joe' where name = 'admin'") ==> 1
@@ -47,7 +47,7 @@ object BasicTests extends TestSuite {
 
         // product interpolation
         val account = Account(43, Profile("john2", "john2@smith.com"))
-        sq.write(sql"""insert into user values ($account)""") ==> 1
+        sq.write(sql"""insert into user values (${account.id}, ${account.p.name}, ${account.p.email})""") ==> 1
         sq.read[Int](sql"""select id from user where name='john2'""") ==> 43 :: Nil
       }
     }

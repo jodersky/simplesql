@@ -10,7 +10,6 @@ that, which unfortunately is not yet available for Scala 3), but it does offer
 safe string interpolation and utilities to work with product types, wich are the
 natural representation of relational data sets.
 
-
 SimpleSQL has no dependencies. It is published to maven central, under
 `io.crashbox:simplesql_3`, but **it can also be embedded by copying the file
 [simplesql/src/package.scala](https://raw.githubusercontent.com/jodersky/simplesql/master/simplesql/src/package.scala)
@@ -46,11 +45,8 @@ sq.transaction(ds){
   sq.read[(Int, String, String)](sql"select * from user")
   sq.write(sql"""insert into user values (1, "admin", "admin@example.org")""")
 
-  // also works with named products, i.e. case classes
-  case class User(id: Int, name: String, email: String)
+  case class User(id: Int, name: String, email: String) derives sq.Reader
   sq.read[User](sql"select * from user")
-  val u = User(2, "admin", "admin@example.org")
-  sq.write(sql"""insert into user values ($u)""")
 }
 ```
 
@@ -71,9 +67,8 @@ changes, should an exception be thrown in its body.
 An in-scope connection also gives access to the `sql` string intepolator. This
 interpolator is a utility to build `simplesql.Query`s, which are builders for
 `java.sql.PreparedStatements`. In other words, it can be used to build
-injection-safe queries with interpolated parameters. Interpolated parameters may
-be primitve types (supported by JDBC), or products of these. Products will be
-flattened into multiple interpolated '?' parameters.
+injection-safe queries with interpolated parameters. Interpolated parameters
+must be primitve types (supported by JDBC).
 
 ### Read Queries
 
