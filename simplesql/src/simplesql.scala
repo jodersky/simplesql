@@ -138,6 +138,12 @@ object SimpleWriter {
   given SimpleWriter[Array[Byte]] = (stat, idx, value) => stat.setBytes(idx, value)
   given SimpleWriter[BigDecimal] = (stat, idx, value) => stat.setBigDecimal(idx, value.bigDecimal)
 
+  given optWriter[A](using writer: SimpleWriter[A]): SimpleWriter[Option[A]] with {
+      def write(stat: jsql.PreparedStatement, idx: Int, value: Option[A]) = value match {
+        case Some (v) => writer.write (stat, idx, v)
+        case None => stat.setNull(idx, jsql.Types.NULL)
+    }
+  }
 }
 
 trait Reader[A] {
@@ -183,6 +189,12 @@ object Reader {
     val arity = 1
     def read(results: jsql.ResultSet, baseIdx: Int) = results.getBytes(baseIdx)
   }
+
+  given optReader[T](using reader: Reader[T]): Reader[Option[T]] with {
+    val arity = 1
+    def read(results: jsql.ResultSet, baseIdx: Int) = Option (reader.read (results, baseIdx) )
+  }
+
 
   class ProductReader[A](
     m: deriving.Mirror.ProductOf[A],
