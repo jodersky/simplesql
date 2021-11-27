@@ -103,7 +103,8 @@ object BasicTests extends TestSuite {
 
         val accountWithoutName = Account(44, Profile(None, "unknown@test.com"))
         sq.write(sql"""insert into user values (${accountWithoutName.id}, ${accountWithoutName.p.name}, ${accountWithoutName.p.email})""") ==> 1
-        sq.read[Int](sql"""select id from user where email='unknown@test.com'""") ==> 44 :: Nil
+        sq.read[Option[String]](sql"""select name from user where email='unknown@test.com'""") ==> None :: Nil
+        sq.read[User](sql"""select * from user where id=44""") ==> User(44, None, "unknown@test.com") :: Nil
       }
     }
   }
