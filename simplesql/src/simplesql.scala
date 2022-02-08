@@ -61,7 +61,7 @@ object Query {
 
   // The caller must close the statement
   def newPreparedStatement(q: Query, c: jsql.Connection): jsql.PreparedStatement = {
-    val stat = c.prepareStatement(q.sql)
+    val stat = c.prepareStatement(q.sql, jsql.Statement.RETURN_GENERATED_KEYS)
     q.fillStatement(stat)
     stat
   }
@@ -276,6 +276,7 @@ object write {
       stat = Query.newPreparedStatement(query, c.underlying)
       stat.executeUpdate()
       res = stat.getGeneratedKeys()
+      res.next()
       r.read(res, 1)
     } finally {
       if (res != null) res.close()
