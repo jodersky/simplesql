@@ -72,7 +72,7 @@ object Query {
     val args: Seq[Expr[_]] = args0 match {
       case Varargs(exprs) => exprs
     }
-    val writers: Seq[Expr[SimpleWriter[_]]] = for ('{ $arg: t } <- args) yield {
+    val writers: Seq[Expr[SimpleWriter[_]]] = for (case '{ $arg: t } <- args) yield {
       val w = TypeRepr.of[SimpleWriter].appliedTo(
         TypeRepr.of[t].widen
       )
