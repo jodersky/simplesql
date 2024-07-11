@@ -1,9 +1,9 @@
 import mill._, scalalib._, scalafmt._, publish._
 
 object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
-  def scalaVersion = "3.0.2"
+  def scalaVersion = "3.3.3"
 
-  def publishVersion = "0.2.2"
+  def publishVersion = "0.3.0"
   def pomSettings = PomSettings(
     description = "Simple SQL queries around JDBC",
     organization = "io.crashbox",
@@ -15,11 +15,14 @@ object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
     )
   )
 
-  object test extends Tests{
+  def ivyDeps = Agg(
+    ivy"com.zaxxer:HikariCP:4.0.3", // connection pooling, provides a datasource
+  )
+
+  object test extends ScalaTests {
     def testFramework = "utest.runner.Framework"
     def ivyDeps = Agg(
-      ivy"com.lihaoyi::utest::0.7.10",
-      ivy"com.zaxxer:HikariCP:4.0.3", // connection pooling, provides a datasource
+      ivy"com.lihaoyi::utest::0.8.2",
       ivy"org.xerial:sqlite-jdbc:3.32.3.2"
     )
   }
