@@ -41,7 +41,6 @@ ds.transaction:
 
   case class User(id: Int, name: String, email: String) derives sq.Reader
   sql"select * from user".read[User]
-}
 ```
 
 ## Explanation
