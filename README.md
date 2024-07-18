@@ -162,6 +162,10 @@ too to manage them for us.
 
 ## Changelog
 
+### 0.4.0
+
+- Rework migrations module to a graph-based system.
+
 ### 0.3.0
 
 - Make `run` and `transaction` methods of `DataSource` instead of top-level

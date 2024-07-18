@@ -11,7 +11,7 @@ trait Utest extends TestModule {
 object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
   def scalaVersion = "3.3.3"
 
-  def publishVersion = "0.3.0"
+  def publishVersion = "0.4.0"
   def pomSettings = PomSettings(
     description = "Simple SQL queries around JDBC",
     organization = "io.crashbox",
