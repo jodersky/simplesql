@@ -82,7 +82,7 @@ run in a `write` call.
 
 Simplesql also has an experimental module to manage database migrations. This is
 included if simplesql is consumed via maven, otherwise it must be added by
-copying the file in `migrations/src/simplesql/migrations/migrations.scala`.
+copying the file in `simplesql/src/simplesql/migrations.scala`.
 
 Essentially, the module works by looking for `.sql` files in a folder on the
 classpath (typically packaged in your final application jar) and applying them
@@ -115,7 +115,7 @@ The upgrade and downgrade statements are placeholders for actual SQL. The `--
 prev` and `-- down` comments have special meaning for migrations however and
 must appear literally.
 
-See migrations/test/resources/migrations/ for some example files.
+See simplesql/test/resources/migrations/ for some example files.
 
 ### Applying a migration
 

@@ -29,9 +29,3 @@ object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
 
   object test extends ScalaTests with Utest
 }
-
-object migrations extends ScalaModule {
-  def scalaVersion = "3.3.3"
-  def moduleDeps = Seq(simplesql)
-  object test extends ScalaTests with Utest
-}
