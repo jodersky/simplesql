@@ -82,21 +82,83 @@ run in a `write` call.
 
 Simplesql also has an experimental module to manage database migrations. This is
 included if simplesql is consumed via maven, otherwise it must be added by
-copying the file in `simplesql/src/migrations.scala`.
+copying the file in `migrations/src/simplesql/migrations/migrations.scala`.
 
 Essentially, the module works by looking for `.sql` files in a folder on the
 classpath (typically packaged in your final application jar) and applying them
-after sorting them alphabetically. The module also adds a special table to your
-satasource to keep track of which migrations have been already applied.
+"in order" to reach a specific version (see below). The module also adds a
+special table to your datasource to keep track of which migrations have been
+already applied.
 
-### Example
+### Defining a migration
+
+A migration is an sql file which consists of:
+
+- a unique name
+- a reference to the version which precedes it (or "base" if nothing should precede it)
+- upgrade sql statements
+- downgrade sql statements
+
+this information apart from the file name is encoded in the following way:
+
+```sql
+-- prev: <prev version>
+
+  -- upgrade statements
+
+-- down:
+
+  -- downgrade statements
+```
+
+The upgrade and downgrade statements are placeholders for actual SQL. The `--
+prev` and `-- down` comments have special meaning for migrations however and
+must appear literally.
+
+See migrations/test/resources/migrations/ for some example files.
+
+### Applying a migration
 
 ```scala
-val ds = simplesql.DataSource(...)
-simplesql.migrations.run(ds) // run migrations that have not yet been applied
+val mdb = simplesql.migrations.MigrationTool.fromClasspath(
+  simplesql.DataSource.pooled("jdbc:sqlite::memory:")
+)
 
-simplesql.migrations.run(ds) // a second call is safe and won't do anything
+mdb.applyUp("0001_data.sql") // migrate upwards to explicit version
+mdb.applyUp("head") // "head" means the "newest" version, it will fail if there are multiple newest versions
+mdb.applyDown("base") // "base" is a special version which means the initial version before any migration was ever applied
 ```
+
+Note: we recommend only ever downgrading for development purposes. In
+production, any mistakes should always be corrected with upgrading migrations.
+
+### Order of migrations
+
+Each migration must have a pointer to a previous migration file. When applying a
+migration, the system will first do a topological sort from the target
+migration, and then apply migrations that are necessary.
+
+Using explicit pointers instead of relying on filename order has a couple of
+benefits:
+
+- It allows branching during development.
+- Since and error will occur if attempting to migrate to the head version when
+  there are multiple heads, it eliminates a source of data corruption if multiple
+  migrations are devloped simultanously and merged together without rebasing
+  them into a linear sequence.
+
+### Acknowledgements
+
+The idea of branching in the migration library has been inspired from
+[Alembic](https://alembic.sqlalchemy.org/en/latest/). However, instead of
+allowing migration merges, we explicitly require rebases to a linear history.
+Also, migration versions correspond 1-1 with file names instead of synthetic
+version identifiers that are part of the file names. We believe that this allows
+developers to benefit from lexicographically sorted migrations (e.g. by calling
+your migrations `0000-init.sql`, `0001-foo.sql`, `0002-bar.sql` etc), but still
+prevent accidental non-determinism when developing concurrently with others. It
+also makes it easy to write migrations by hand without the need of a separate
+too to manage them for us.
 
 ## Changelog
 

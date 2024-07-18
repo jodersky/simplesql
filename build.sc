@@ -1,5 +1,13 @@
 import mill._, scalalib._, scalafmt._, publish._
 
+trait Utest extends TestModule {
+  def testFramework = "utest.runner.Framework"
+  def ivyDeps = Agg(
+    ivy"com.lihaoyi::utest::0.8.3",
+    ivy"org.xerial:sqlite-jdbc:3.32.3.2"
+  )
+}
+
 object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
   def scalaVersion = "3.3.3"
 
@@ -19,11 +27,11 @@ object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
     ivy"com.zaxxer:HikariCP:4.0.3", // connection pooling, provides a datasource
   )
 
-  object test extends ScalaTests {
-    def testFramework = "utest.runner.Framework"
-    def ivyDeps = Agg(
-      ivy"com.lihaoyi::utest::0.8.2",
-      ivy"org.xerial:sqlite-jdbc:3.32.3.2"
-    )
-  }
+  object test extends ScalaTests with Utest
+}
+
+object migrations extends ScalaModule {
+  def scalaVersion = "3.3.3"
+  def moduleDeps = Seq(simplesql)
+  object test extends ScalaTests with Utest
 }
