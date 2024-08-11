@@ -11,7 +11,7 @@ natural representation of relational data sets.
 
 SimpleSQL only uses Hikari for database connection pooling, but has no
 dependencies otherwise (and even that can easily be removed). It is published to
-maven central, under `io.crashbox:simplesql_3:0.3.0`, but **it can also be embedded by
+maven central, under `io.crashbox:simplesql_3:0.4.0`, but **it can also be embedded by
 copying the file
 [simplesql/src/simplesql.scala](https://raw.githubusercontent.com/jodersky/simplesql/master/simplesql/src/simplesql.scala)
 into your application**!
@@ -23,7 +23,7 @@ import simplesql as sq
 
 // a plain DataSource is needed, this example uses a connection pool implemented
 // by HicariCP
-val ds: sq.DataSource.pooled("jdbc:sqlite::memory:")
+val ds = sq.DataSource.pooled("jdbc:sqlite::memory:")
 
 // all queries must be run within the context of a connection, use either
 // `<ds>.run` or `<ds>.transaction` blocks
@@ -31,16 +31,18 @@ ds.transaction:
   sql"""
     create table user (
       id integer primary key,
-      name string not null,
-      email string not null
+      name text not null,
+      email text not null
     )
   """.write()
 
   sql"select * from user".read[(Int, String, String)]
-  sql"""insert into user values (1, "admin", "admin@example.org")""".write()
+  sql"""insert into user values (1, 'admin', 'admin@example.org')""".write()
 
   case class User(id: Int, name: String, email: String) derives sq.Reader
   sql"select * from user".read[User]
+
+  sql"select name, id from user where id = ${1}".read[(String, Int)]
 ```
 
 ## Explanation
