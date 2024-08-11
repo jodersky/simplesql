@@ -182,7 +182,7 @@ too to manage them for us.
   the syntax is now
 
   ```scala
-  sq.transaction:
+  ds.transaction:
     sql"""...""".read[A]
   ```
 
