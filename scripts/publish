@@ -1,5 +1,7 @@
 #!/bin/bash
 
-./mill -i mill.scalalib.PublishModule/publishAll \
-    __.publishArtifacts jodersky:"$(pass infra/oss.sonatype.org)" \
-    --release true
+./mill -i mill.contrib.sonatypecentral.SonatypeCentralPublishModule/publishAll \
+    --username CiC1giTN \
+    --password "$(pass infra/s01.oss.sonatype.org | head -n 1)" \
+    --publishArtifacts __.publishArtifacts \
+    --shouldRelease true

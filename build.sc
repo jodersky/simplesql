@@ -1,5 +1,8 @@
 import mill._, scalalib._, scalafmt._, publish._
 
+import $ivy.`com.lihaoyi::mill-contrib-sonatypecentral:`
+import mill.contrib.sonatypecentral.SonatypeCentralPublishModule
+
 trait Utest extends TestModule {
   def testFramework = "utest.runner.Framework"
   def ivyDeps = Agg(
@@ -8,7 +11,7 @@ trait Utest extends TestModule {
   )
 }
 
-object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
+object simplesql extends ScalaModule with ScalafmtModule with SonatypeCentralPublishModule {
   def scalaVersion = "3.3.3"
 
   def publishVersion = "0.4.0"
