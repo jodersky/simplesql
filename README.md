@@ -164,6 +164,12 @@ too to manage them for us.
 
 ## Changelog
 
+### 0.4.1
+
+- fix `java.time.Instant` representation: delegate it to jdbc
+- upgrade scala LTS patch version to 3.3.8
+- upgrade mill
+
 ### 0.4.0
 
 - Rework migrations module to a graph-based system.
