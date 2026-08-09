@@ -1,17 +1,15 @@
+//| mill-version: 1.1.8
 import mill._, scalalib._, scalafmt._, publish._
-
-import $ivy.`com.lihaoyi::mill-contrib-sonatypecentral:`
-import mill.contrib.sonatypecentral.SonatypeCentralPublishModule
 
 trait Utest extends TestModule {
   def testFramework = "utest.runner.Framework"
-  def ivyDeps = Agg(
-    ivy"com.lihaoyi::utest::0.8.3",
-    ivy"org.xerial:sqlite-jdbc:3.32.3.2"
+  def mvnDeps = Seq(
+    mvn"com.lihaoyi::utest::0.8.3",
+    mvn"org.xerial:sqlite-jdbc:3.32.3.2"
   )
 }
 
-object simplesql extends ScalaModule with ScalafmtModule with SonatypeCentralPublishModule {
+object simplesql extends ScalaModule with ScalafmtModule with PublishModule {
   def scalaVersion = "3.3.8"
 
   def publishVersion = "0.4.1"
@@ -26,8 +24,11 @@ object simplesql extends ScalaModule with ScalafmtModule with SonatypeCentralPub
     )
   )
 
-  def ivyDeps = Agg(
-    ivy"com.zaxxer:HikariCP:4.0.3", // connection pooling, provides a datasource
+  def mvnDeps = Seq(
+    mvn"com.zaxxer:HikariCP:4.0.3", // connection pooling, provides a datasource
+  )
+  def compileOptions = Seq(
+    "-target", "17"
   )
 
   object test extends ScalaTests with Utest
