@@ -12,9 +12,9 @@ trait Utest extends TestModule {
 }
 
 object simplesql extends ScalaModule with ScalafmtModule with SonatypeCentralPublishModule {
-  def scalaVersion = "3.3.3"
+  def scalaVersion = "3.3.8"
 
-  def publishVersion = "0.4.0"
+  def publishVersion = "0.4.1"
   def pomSettings = PomSettings(
     description = "Simple SQL queries around JDBC",
     organization = "io.crashbox",

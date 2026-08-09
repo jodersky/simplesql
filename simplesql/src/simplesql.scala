@@ -154,7 +154,7 @@ object SimpleWriter:
   given SimpleWriter[Array[Byte]] = (stat, idx, value) => stat.setBytes(idx, value)
   given SimpleWriter[BigDecimal] = (stat, idx, value) => stat.setBigDecimal(idx, value.bigDecimal)
   given SimpleWriter[ju.UUID] = (stat, idx, value) => stat.setObject(idx, value)
-  given SimpleWriter[Instant] = (stat, idx, value) => stat.setLong(idx, value.getEpochSecond())
+  given SimpleWriter[Instant] = (stat, idx, value) => stat.setObject(idx, value)
 
   given optWriter[A](using writer: SimpleWriter[A]): SimpleWriter[Option[A]] with {
       def write(stat: jsql.PreparedStatement, idx: Int, value: Option[A]) = value match {
@@ -214,8 +214,8 @@ object SimpleReader:
       result.getObject(name).asInstanceOf[ju.UUID]
 
   given SimpleReader[Instant] with
-    def readIdx(results: jsql.ResultSet, idx: Int) = Instant.ofEpochSecond(results.getLong(idx))
-    def readName(results: jsql.ResultSet, name: String) = Instant.ofEpochSecond(results.getLong(name))
+    def readIdx(results: jsql.ResultSet, idx: Int) = results.getObject(idx, classOf[Instant])
+    def readName(results: jsql.ResultSet, name: String) = results.getObject(name, classOf[Instant])
 
   given optReader[T](using reader: SimpleReader[T]): SimpleReader[Option[T]] with
     def readIdx(results: jsql.ResultSet, idx: Int) = Option(reader.readIdx(results, idx))
