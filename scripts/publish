@@ -1,7 +1,10 @@
 #!/bin/bash
+set -o errexit
 
-./mill -i mill.contrib.sonatypecentral.SonatypeCentralPublishModule/publishAll \
-    --username CiC1giTN \
-    --password "$(pass infra/s01.oss.sonatype.org | head -n 1)" \
-    --publishArtifacts __.publishArtifacts \
-    --shouldRelease true
+export MILL_SONATYPE_USERNAME="CiC1giTN"
+MILL_SONATYPE_PASSWORD="$(pass infra/ci-sonatype | head -n 1)"
+export MILL_SONATYPE_PASSWORD
+
+./mill mill.javalib.SonatypeCentralPublishModule/ \
+    --useGpgCli=true \
+    --gpgArgs="--batch,--yes,--armor,--detach-sign"
