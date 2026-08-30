@@ -56,6 +56,10 @@ case class Connection(underlying: jsql.Connection):
 case class Query(conn: Connection, sql: String, fillStatement: jsql.PreparedStatement => Unit):
 
   def read[A](using r: Reader[A]): List[A] =
+    if (conn.underlying.isClosed)
+      throw Exception(
+        "Connection is already closed, are you calling simplesql.Query.read() inside simplesql.DataSource.run() or simplesql.DataSource.transaction()?"
+      )
     val elems = collection.mutable.ListBuffer.empty[A]
 
     var stat: jsql.PreparedStatement = null
@@ -77,6 +81,10 @@ case class Query(conn: Connection, sql: String, fillStatement: jsql.PreparedStat
   def readOpt[A](using r: Reader[A]): Option[A] = read[A].headOption
 
   def write(): Int =
+    if (conn.underlying.isClosed)
+      throw Exception(
+        "Connection is already closed, are you calling simplesql.Query.write() inside simplesql.DataSource.run() or simplesql.DataSource.transaction()?"
+      )
     var stat: jsql.PreparedStatement = null
     try
       stat = conn.underlying.prepareStatement(sql, jsql.Statement.RETURN_GENERATED_KEYS)
