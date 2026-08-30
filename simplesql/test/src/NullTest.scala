@@ -1,5 +1,6 @@
 import utest.*
 import simplesql as sq
+import simplesql.sql
 
 object NullTest extends TestSuite:
 

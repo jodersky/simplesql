@@ -1,6 +1,6 @@
 import utest.*
 
-import simplesql.migrations as sqm
+import simplesql.{sql, migrations as sqm}
 import scala.annotation.migration
 
 object MigrationsTest extends TestSuite:

@@ -47,15 +47,15 @@ import java.{util => ju}
 import java.time.Instant
 
 @annotation.implicitNotFound("No database connection found. Make sure to call this in a `run()` or `transaction()` block.")
-case class Connection(underlying: jsql.Connection):
-  self =>
-  extension (inline sc: StringContext)
-    inline def sql(inline args: Any*): Query = ${Query.sqlImpl('self, '{sc}, '{args})}
+case class Connection(underlying: jsql.Connection)
+
+extension (inline sc: StringContext)
+  inline def sql(inline args: Any*): Query = ${Query.sqlImpl('{sc}, '{args})}
 
 /** A thin wrapper around an SQL statement */
-case class Query(conn: Connection, sql: String, fillStatement: jsql.PreparedStatement => Unit):
+case class Query(sql: String, fillStatement: jsql.PreparedStatement => Unit):
 
-  def read[A](using r: Reader[A]): List[A] =
+  def read[A](using conn: Connection, r: Reader[A]): List[A] =
     val elems = collection.mutable.ListBuffer.empty[A]
 
     var stat: jsql.PreparedStatement = null
@@ -72,11 +72,11 @@ case class Query(conn: Connection, sql: String, fillStatement: jsql.PreparedStat
       if stat != null then stat.close()
     elems.result()
 
-  def readOne[A](using r: Reader[A]): A = read[A].head
+  def readOne[A](using Connection, Reader[A]): A = read[A].head
 
-  def readOpt[A](using r: Reader[A]): Option[A] = read[A].headOption
+  def readOpt[A](using Connection, Reader[A]): Option[A] = read[A].headOption
 
-  def write(): Int =
+  def write()(using conn: Connection): Int =
     var stat: jsql.PreparedStatement = null
     try
       stat = conn.underlying.prepareStatement(sql, jsql.Statement.RETURN_GENERATED_KEYS)
@@ -84,11 +84,13 @@ case class Query(conn: Connection, sql: String, fillStatement: jsql.PreparedStat
       stat.executeUpdate()
     finally
       if stat != null then stat.close()
+      
+end Query
 
 object Query:
 
   import scala.quoted.{Expr, Quotes, Varargs}
-  def sqlImpl(c: Expr[Connection], sc0: Expr[StringContext], args0: Expr[Seq[Any]])(using qctx: Quotes): Expr[Query] =
+  def sqlImpl(sc0: Expr[StringContext], args0: Expr[Seq[Any]])(using qctx: Quotes): Expr[Query] =
     import scala.quoted.quotes.reflect._
     val args: Seq[Expr[?]] = args0 match
       case Varargs(exprs) => exprs
@@ -119,7 +121,6 @@ object Query:
 
     val r = '{
       Query(
-        $c,
         ${Expr(qstring)},
         (stat: jsql.PreparedStatement) => ${
           val exprs = for (((writer, arg), idx) <- writers.zip(args).zipWithIndex.toList) yield {

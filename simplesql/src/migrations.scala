@@ -1,5 +1,7 @@
 package simplesql.migrations
 
+import simplesql.sql
+
 import collection.mutable as m
 import scala.annotation.migration
 import java.sql.SQLException

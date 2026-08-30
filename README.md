@@ -20,6 +20,7 @@ into your application**!
 
 ```scala
 import simplesql as sq
+import simplesql.sql
 
 // a plain DataSource is needed, this example uses a connection pool implemented
 // by HicariCP

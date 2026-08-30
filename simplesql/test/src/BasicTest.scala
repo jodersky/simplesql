@@ -1,6 +1,7 @@
 import utest.*
 
 import simplesql as sq
+import simplesql.sql
 
 object BasicTest extends TestSuite:
 
